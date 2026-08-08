@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* Ensure the app takes up the exact visual viewport on mobile (solves safari toolbar cuts) */
+.dynamic-height {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Heart float keyframes for background atmosphere */
+@keyframes float-heart {
+  0% {
+    transform: translateY(110vh) scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-10vh) scale(1) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.floating-heart {
+  position: absolute;
+  bottom: -20px;
+  pointer-events: none;
+  animation: float-heart linear infinite;
+  z-index: 0;
+}
+
+/* Custom wiggle animation for the closed gift boxes to entice clicking */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.animate-wiggle {
+  animation: wiggle 0.5s ease-in-out infinite;
+}
