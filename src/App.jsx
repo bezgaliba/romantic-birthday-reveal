@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import CryptoJS from 'crypto-js';
 
 // Configure your customized partner details here!
 const PARTNER_NAME = "Kane";
@@ -12,7 +11,7 @@ const BIRTHDAY_MESSAGE = `
   Press the button below to start.
 `;
 
-const SECURE_ENCRYPTED_KEY = "U2FsdGVkX1+HLlsIhevHSlULgxZBSpQmJDWcfgHMYfWCmDH5k0ltlBN3zSk1hAyy"; 
+const SECURE_ENCRYPTED_PAYLOAD = "eyJjaXBoZXJ0ZXh0IjoiYWVhYzY5NjAwNDI0NTc0OGJhYTVmNjJmYzRhOTA2ZjJiNDFhZWEiLCJpdiI6ImI3MDkxM2Q0NGZlZDBkYTA5Zjk5MWI4NiIsInNhbHQiOiJmODljODM3MmE3ZWFmZDBiNmJjZGNkZDE5MGE3MDg2ZiIsInRhZyI6IjNhMTljYjRjNDJjZGUyN2RhNmFiMTE5NjllNDRjY2Q1In0="; 
 
 const PRESENTS = [
   {
@@ -87,14 +86,76 @@ export default function App() {
     setDecryptError('');
   };
 
-  const handleUnlockKey = () => {
+  // Helper utility to convert hex strings back to standard Uint8Arrays for Web Crypto
+  const hexToUint8Array = (hexString) => {
+    const matched = hexString.match(/.{1,2}/g);
+    return new Uint8Array(matched ? matched.map(byte => parseInt(byte, 16)) : []);
+  };
+
+  // Modern browser-native Web Crypto AES-GCM Decryption
+  const decryptWithWebCrypto = async (base64Payload, password) => {
     try {
-      // Decrypt on-the-fly using their password input
-      const bytes = CryptoJS.AES.decrypt(SECURE_ENCRYPTED_KEY, passwordInput.toLowerCase().trim());
-      const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
-      
-      if (decryptedText && decryptedText.length > 3) {
-        setDecryptedKey(decryptedText);
+      // 1. Decode the base64 wrapper string
+      const jsonStr = atob(base64Payload);
+      const { ciphertext, iv, salt, tag } = JSON.parse(jsonStr);
+
+      const saltBuf = hexToUint8Array(salt);
+      const ivBuf = hexToUint8Array(iv);
+      const tagBuf = hexToUint8Array(tag);
+      const cipherTextBuf = hexToUint8Array(ciphertext);
+
+      // Concatenate ciphertext and GCM authentication tag as required by Web Crypto Subtle API
+      const combinedCiphertext = new Uint8Array(cipherTextBuf.length + tagBuf.length);
+      combinedCiphertext.set(cipherTextBuf);
+      combinedCiphertext.set(tagBuf, cipherTextBuf.length);
+
+      // 2. Derive cryptographic key material from password using PBKDF2
+      const encoder = new TextEncoder();
+      const passwordKey = await window.crypto.subtle.importKey(
+        'raw',
+        encoder.encode(password.toLowerCase().trim()),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+
+      // 3. Derive the actual AES-GCM 256-bit key using PBKDF2 matches
+      const aesKey = await window.crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: saltBuf,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        passwordKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['decrypt']
+      );
+
+      // 4. Perform Decrypt
+      const decryptedBuf = await window.crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: ivBuf,
+          tagLength: 128
+        },
+        aesKey,
+        combinedCiphertext
+      );
+
+      const decoder = new TextDecoder();
+      return decoder.decode(decryptedBuf);
+    } catch (err) {
+      throw new Error("Decryption failed");
+    }
+  };
+
+  const handleUnlockKey = async () => {
+    try {
+      const result = await decryptWithWebCrypto(SECURE_ENCRYPTED_PAYLOAD, passwordInput);
+      if (result && result.length > 0) {
+        setDecryptedKey(result);
         setDecryptError('');
       } else {
         setDecryptError("Incorrect password! Try again ❤️");
@@ -169,12 +230,6 @@ export default function App() {
       </div>
     );
   };
-
-  const ArrowIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-    </svg>
-  );
 
   const handleRatingChange = (key, val) => {
     setRatings(prev => ({ ...prev, [key]: parseInt(val, 10) }));
@@ -392,11 +447,10 @@ export default function App() {
                 emoji={currentPresent.emoji}
               />
 
-              {/* Render Section: Check if it's the secure Present 2 (Switch Game) */}
+              {/* Render Section: Check if it's the secure Present 2 */}
               {currentPresent.id === 2 ? (
                 <div className="bg-white/50 p-5 rounded-2xl border border-emerald-100 shadow-sm text-left">
                   {!decryptedKey ? (
-                    /* The Password Input Challenge View */
                     <div className="space-y-3">
                       <p className="font-bold text-gray-800 text-sm">🔒 This secret key is locked!</p>
                       <p className="text-xs text-gray-600 leading-relaxed">
@@ -419,11 +473,10 @@ export default function App() {
                         </button>
                       </div>
                       {decryptError && (
-                        <p className="text-[11px] text-rose-500 font-bold animate-shake">{decryptError}</p>
+                        <p className="text-[11px] text-rose-500 font-bold">{decryptError}</p>
                       )}
                     </div>
                   ) : (
-                    /* Decrypted Rich Text view */
                     <div className="space-y-4 text-left animate-fade-in">
                       <p className="font-bold text-gray-900 text-base">A mystery game you've unlocked!</p>
                       
@@ -460,7 +513,6 @@ export default function App() {
                   )}
                 </div>
               ) : (
-                /* Standard text renders for Dolphin Swim & Mauritius Dinner */
                 <div className="bg-white/50 p-5 rounded-2xl border border-emerald-100 shadow-sm text-gray-700 text-sm sm:text-base leading-relaxed text-left">
                   {currentPresent.description}
                 </div>
@@ -494,7 +546,6 @@ export default function App() {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-sm sm:text-base cursor-pointer"
             >
               {stage === 0 ? "Let's review breakfast!" : stage === 1 ? "Submit Reviews & See Gifts!" : stage % 2 === 0 ? "Open Gift" : "Next Surprise"}
-              <ArrowIcon />
             </button>
           ) : (
             <p className="text-center w-full text-xs text-gray-400 font-medium italic">
