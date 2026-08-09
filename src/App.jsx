@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CryptoJS from 'crypto-js';
 
 // Configure your customized partner details here!
 const PARTNER_NAME = "Kane";
@@ -10,6 +11,8 @@ const BIRTHDAY_MESSAGE = `
   Before we do, I need a quick favor of reviewing your morning service!
   Press the button below to start.
 `;
+
+const SECURE_ENCRYPTED_KEY = "U2FsdGVkX1+HLlsIhevHSlULgxZBSpQmJDWcfgHMYfWCmDH5k0ltlBN3zSk1hAyy"; 
 
 const PRESENTS = [
   {
@@ -26,41 +29,9 @@ const PRESENTS = [
     title: "Game on Nintendo Switch 2",
     emoji: "🎮🕵️‍♂️🎁",
     imageName: "gift2.png", // Placed in the public/ folder
-    description: (
-      <div className="space-y-4 text-left">
-        <p className="font-bold text-gray-900 text-base">A mystery game you've unlocked!</p>
-        
-        <p className="text-xs uppercase tracking-wider font-extrabold text-indigo-600">
-          How to claim your adventure:
-        </p>
-        
-        <ol className="list-decimal pl-5 space-y-3 text-xs sm:text-sm text-gray-700">
-          <li className="pl-1">
-            Log into <span className="font-bold text-gray-900">accounts.nintendo.com</span> and change your account region to <span className="font-bold text-indigo-600">Japan</span>.
-            <div className="mt-1.5 pl-3 border-l-2 border-rose-300 text-xs text-rose-600 font-medium">
-              Note: This action will temporarily reset your active eShop balance.
-            </div>
-          </li>
-          
-          <li className="pl-1">
-            Open <span className="font-bold text-gray-900">ec.nintendo.com/redeem</span> in your web browser.
-          </li>
-          
-          <li className="pl-1">
-            Redeem your secret activation key:
-            <div className="mt-2 pl-2">
-              <code className="block bg-gray-100/90 py-2 px-4 rounded-xl border border-gray-200 font-mono text-center text-sm font-black tracking-widest text-indigo-700 select-all shadow-inner">
-                XXXX-XXXX-XXXX-XXXX
-              </code>
-            </div>
-          </li>
-          
-          <li className="pl-1">
-            Switch your region back to its previous setting, download your game, and start playing!
-          </li>
-        </ol>
-      </div>
-    )
+    description: null,
+    ribbonColor: "#10b981",
+    boxColor: "#34d399"
   },
   {
     id: 3,
@@ -74,17 +45,14 @@ const PRESENTS = [
 ];
 
 export default function App() {
-  // Stages: 
-  // 0: Initial Birthday Letter
-  // 1: Interactive Breakfast Feedback Form 🥞
-  // 2: Present 1 (Closed) -> 3: Present 1 (Opened)
-  // 4: Present 2 (Closed) -> 5: Present 2 (Opened)
-  // 6: Present 3 (Closed) -> 7: Present 3 (Opened)
-  // 8: Final Screen
   const [stage, setStage] = useState(0);
   const [hearts, setHearts] = useState([]);
   
-  // Feedback Form State
+  // Decryption Challenge State
+  const [passwordInput, setPasswordInput] = useState('');
+  const [decryptedKey, setDecryptedKey] = useState('');
+  const [decryptError, setDecryptError] = useState('');
+
   const [ratings, setRatings] = useState({
     coffee: 10,
     juice: 10,
@@ -93,7 +61,6 @@ export default function App() {
     flowers: 10
   });
 
-  // Generate floating heart background elements
   useEffect(() => {
     const generatedHearts = Array.from({ length: 15 }).map((_, idx) => ({
       id: idx,
@@ -115,6 +82,26 @@ export default function App() {
   const handleReset = () => {
     setStage(0);
     setRatings({ coffee: 10, juice: 10, pancakes: 10, bacon: 10, flowers: 10 });
+    setPasswordInput('');
+    setDecryptedKey('');
+    setDecryptError('');
+  };
+
+  const handleUnlockKey = () => {
+    try {
+      // Decrypt on-the-fly using their password input
+      const bytes = CryptoJS.AES.decrypt(SECURE_ENCRYPTED_KEY, passwordInput.toLowerCase().trim());
+      const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+      
+      if (decryptedText && decryptedText.length > 3) {
+        setDecryptedKey(decryptedText);
+        setDecryptError('');
+      } else {
+        setDecryptError("Incorrect password! Try again ❤️");
+      }
+    } catch (e) {
+      setDecryptError("Incorrect password! Try again ❤️");
+    }
   };
 
   const HeartIcon = ({ className = "w-6 h-6" }) => (
@@ -125,28 +112,20 @@ export default function App() {
 
   const GiftIconClosed = ({ boxColor, ribbonColor }) => (
     <svg className="w-40 h-40 mx-auto drop-shadow-lg cursor-pointer animate-wiggle hover:scale-105 transition-transform" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Box base */}
       <rect x="40" y="80" width="120" height="90" rx="8" fill={boxColor} />
-      {/* Box lid */}
       <rect x="30" y="60" width="140" height="25" rx="4" fill={boxColor} filter="brightness(1.1)" />
-      {/* Horizontal Ribbon */}
       <rect x="30" y="70" width="140" height="10" fill={ribbonColor} />
-      {/* Vertical Ribbon */}
       <rect x="95" y="60" width="10" height="110" fill={ribbonColor} />
-      {/* Bow loops */}
       <path d="M98 60 C80 30, 60 50, 95 60 Z" fill={ribbonColor} />
       <path d="M102 60 C120 30, 140 50, 105 60 Z" fill={ribbonColor} />
     </svg>
   );
 
   const GiftIconOpen = ({ imageName, boxColor, ribbonColor, emoji }) => {
-    // Dynamic asset base resolution (Crucial for GitHub Pages paths!)
     const resolvedImagePath = `${import.meta.env.BASE_URL}${imageName}`;
 
     return (
       <div className="relative w-full max-w-[260px] mx-auto flex flex-col items-center justify-center py-2">
-        
-        {/* Sparkles background layer */}
         <div className="absolute inset-0 pointer-events-none z-0">
           <span className="absolute text-2xl animate-pulse top-0 left-2" style={{ animationDelay: '0.2s' }}>✨</span>
           <span className="absolute text-2xl animate-pulse bottom-10 right-2" style={{ animationDelay: '0.7s' }}>✨</span>
@@ -154,10 +133,7 @@ export default function App() {
           <span className="absolute text-xl animate-pulse bottom-12 left-4" style={{ animationDelay: '1s' }}>⭐</span>
         </div>
 
-        {/* Beautiful tilted Polaroid frame holding your image */}
         <div className="relative z-10 bg-white p-3 pb-6 rounded-lg shadow-xl border border-gray-100 rotate-[-3deg] hover:rotate-[0deg] transition-transform duration-300 w-48 sm:w-52">
-          
-          {/* Heart sticker on top of the polaroid */}
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-rose-500 drop-shadow-sm z-20">
             <HeartIcon className="w-6 h-6 animate-pulse-slow" />
           </div>
@@ -172,7 +148,6 @@ export default function App() {
                 e.target.nextSibling.style.display = 'flex';
               }}
             />
-            {/* Fallback container */}
             <div className="hidden absolute inset-0 items-center justify-center text-5xl bg-gradient-to-tr from-pink-50 to-indigo-50">
               {emoji}
             </div>
@@ -182,7 +157,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Mini Opened box showing subtly behind the polaroid */}
         <div className="absolute -bottom-4 opacity-40 scale-75 pointer-events-none z-0">
           <svg className="w-20 h-20" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="40" y="110" width="120" height="60" rx="8" fill={boxColor} />
@@ -192,7 +166,6 @@ export default function App() {
             </g>
           </svg>
         </div>
-
       </div>
     );
   };
@@ -207,7 +180,6 @@ export default function App() {
     setRatings(prev => ({ ...prev, [key]: parseInt(val, 10) }));
   };
 
-  // Fun response snippets that update dynamically as they slide the scale
   const getReviewReaction = (key, rating) => {
     if (rating === 10) {
       if (key === 'coffee') return "Absolute fuel of gods! ☕⚡";
@@ -217,14 +189,12 @@ export default function App() {
       if (key === 'flowers') return "They smell as sweet as you! 💐❤️";
     }
     
-    // Aesthetic feedback for flowers
     if (key === 'flowers') {
       if (rating >= 8) return "They make the room look so beautiful! 🌸";
       if (rating >= 5) return "A lovely splash of color! 🌷";
       return "I will find an even prettier bouquet next time! 🥺";
     }
 
-    // Delicious feedback for food & drinks
     if (rating >= 8) return "Loved it immensely! 🥰";
     if (rating >= 5) return "Pretty yummy! 😊";
     return "Next time I will cook it even better, promise! 🥺";
@@ -242,7 +212,6 @@ export default function App() {
   return (
     <div className="dynamic-height relative flex items-center justify-center p-4 overflow-hidden select-none">
       
-      {/* Floating Interactive Background Hearts */}
       {hearts.map((h) => (
         <span
           key={h.id}
@@ -259,10 +228,8 @@ export default function App() {
         </span>
       ))}
 
-      {/* Main Container Card */}
       <div className="relative z-10 w-full max-w-md bg-white/70 backdrop-blur-md border border-white/40 shadow-2xl rounded-3xl p-5 sm:p-7 transition-all duration-500 ease-out flex flex-col justify-between min-h-[500px]">
         
-        {/* Progress Dots indicators shown during gift steps (Stages 2-7) */}
         {stage >= 2 && stage < 8 && (
           <div className="flex justify-center gap-2 mb-4">
             {[1, 2, 3].map((num) => {
@@ -280,10 +247,9 @@ export default function App() {
           </div>
         )}
 
-        {/* Dynamic Content Views */}
         <div className="flex-grow flex flex-col justify-center">
           
-          {/* STAGE 0: The Birthday Greeting Letter */}
+          {/* STAGE 0: Letter */}
           {stage === 0 && (
             <div className="text-center animate-fade-in space-y-4">
               <div className="inline-flex items-center justify-center p-3 bg-rose-100 rounded-full text-rose-500 mb-2 animate-bounce-slow">
@@ -299,7 +265,7 @@ export default function App() {
             </div>
           )}
 
-          {/* STAGE 1: 1-10 Birthday Breakfast Feedback Form */}
+          {/* STAGE 1: Morning Review */}
           {stage === 1 && (
             <div className="text-left space-y-4">
               <div className="text-center space-y-1 mb-2">
@@ -309,7 +275,7 @@ export default function App() {
               </div>
 
               <div className="space-y-4 bg-white/55 p-4 rounded-2xl border border-white/60 shadow-inner max-h-[320px] overflow-y-auto pr-1">
-                {/* 1. Coffee */}
+                {/* Coffee */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-center text-xs font-bold text-gray-700">
                     <span className="flex items-center gap-1">☕ Coffee</span>
@@ -323,7 +289,7 @@ export default function App() {
                   <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('coffee', ratings.coffee)}</p>
                 </div>
 
-                {/* 2. Juice */}
+                {/* Juice */}
                 <div className="space-y-1 border-t border-gray-100 pt-2">
                   <div className="flex justify-between items-center text-xs font-bold text-gray-700">
                     <span className="flex items-center gap-1">🍹 Fresh Juice</span>
@@ -337,7 +303,7 @@ export default function App() {
                   <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('juice', ratings.juice)}</p>
                 </div>
 
-                {/* 3. Fluffy Pancakes */}
+                {/* Pancakes */}
                 <div className="space-y-1 border-t border-gray-100 pt-2">
                   <div className="flex justify-between items-center text-xs font-bold text-gray-700">
                     <span className="flex items-center gap-1">🥞 Fluffy Pancakes</span>
@@ -351,7 +317,7 @@ export default function App() {
                   <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('pancakes', ratings.pancakes)}</p>
                 </div>
 
-                {/* 4. Bacon */}
+                {/* Bacon */}
                 <div className="space-y-1 border-t border-gray-100 pt-2">
                   <div className="flex justify-between items-center text-xs font-bold text-gray-700">
                     <span className="flex items-center gap-1">🥓 Crispy Bacon</span>
@@ -365,7 +331,7 @@ export default function App() {
                   <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('bacon', ratings.bacon)}</p>
                 </div>
 
-                {/* 5. Flowers */}
+                {/* Flowers */}
                 <div className="space-y-1 border-t border-gray-100 pt-2">
                   <div className="flex justify-between items-center text-xs font-bold text-gray-700">
                     <span className="flex items-center gap-1">💐 Pretty Flowers</span>
@@ -419,7 +385,6 @@ export default function App() {
                 </h2>
               </div>
 
-              {/* Render picture inside the Polaroid */}
               <GiftIconOpen 
                 imageName={currentPresent.imageName}
                 boxColor={currentPresent.boxColor} 
@@ -427,9 +392,79 @@ export default function App() {
                 emoji={currentPresent.emoji}
               />
 
-              <div className="bg-white/50 p-5 rounded-2xl border border-emerald-100 shadow-sm text-gray-700 text-sm sm:text-base leading-relaxed text-left">
-                {currentPresent.description}
-              </div>
+              {/* Render Section: Check if it's the secure Present 2 (Switch Game) */}
+              {currentPresent.id === 2 ? (
+                <div className="bg-white/50 p-5 rounded-2xl border border-emerald-100 shadow-sm text-left">
+                  {!decryptedKey ? (
+                    /* The Password Input Challenge View */
+                    <div className="space-y-3">
+                      <p className="font-bold text-gray-800 text-sm">🔒 This secret key is locked!</p>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        Enter our special password (lowercase, no spaces) to decrypt and claim your Nintendo Switch game code:
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          placeholder="Enter secret..."
+                          value={passwordInput}
+                          onChange={(e) => setPasswordInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleUnlockKey()}
+                          className="flex-grow text-sm px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                        />
+                        <button
+                          onClick={handleUnlockKey}
+                          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                        >
+                          Decrypt
+                        </button>
+                      </div>
+                      {decryptError && (
+                        <p className="text-[11px] text-rose-500 font-bold animate-shake">{decryptError}</p>
+                      )}
+                    </div>
+                  ) : (
+                    /* Decrypted Rich Text view */
+                    <div className="space-y-4 text-left animate-fade-in">
+                      <p className="font-bold text-gray-900 text-base">A mystery game you've unlocked!</p>
+                      
+                      <p className="text-xs uppercase tracking-wider font-extrabold text-indigo-600">
+                        How to claim your adventure:
+                      </p>
+                      
+                      <ol className="list-decimal pl-5 space-y-3 text-xs sm:text-sm text-gray-700">
+                        <li className="pl-1">
+                          Log into <span className="font-bold text-gray-900">accounts.nintendo.com</span> and change your account region to <span className="font-bold text-indigo-600">Japan</span>.
+                          <div className="mt-1.5 pl-3 border-l-2 border-rose-300 text-xs text-rose-600 font-medium">
+                            Note: This action will temporarily reset your active eShop balance.
+                          </div>
+                        </li>
+                        
+                        <li className="pl-1">
+                          Open <span className="font-bold text-gray-900">ec.nintendo.com/redeem</span> in your web browser.
+                        </li>
+                        
+                        <li className="pl-1">
+                          Redeem your secret activation key:
+                          <div className="mt-2 pl-2">
+                            <code className="block bg-gray-100/90 py-2 px-4 rounded-xl border border-gray-200 font-mono text-center text-sm font-black tracking-widest text-indigo-700 select-all shadow-inner">
+                              {decryptedKey}
+                            </code>
+                          </div>
+                        </li>
+                        
+                        <li className="pl-1">
+                          Switch your region back to its previous setting, download your game, and start playing!
+                        </li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Standard text renders for Dolphin Swim & Mauritius Dinner */
+                <div className="bg-white/50 p-5 rounded-2xl border border-emerald-100 shadow-sm text-gray-700 text-sm sm:text-base leading-relaxed text-left">
+                  {currentPresent.description}
+                </div>
+              )}
             </div>
           )}
 
@@ -444,23 +479,14 @@ export default function App() {
                 I hope you loved your surprises!
               </h2>
               <p className="text-gray-600 text-sm sm:text-base">
-                May this year bring you endless joy and even closer moments between us. I love you to the moon (and beyond) and back! ❤️
+                May this year bring you endless joy, incredible adventures, and even closer moments between us. I love you to the moon and back! ❤️
               </p>
-              
-              <div className="pt-2">
-                <button
-                  onClick={handleReset}
-                  className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-full text-xs sm:text-sm transition-colors shadow-sm inline-flex items-center gap-2 border border-gray-200 cursor-pointer"
-                >
-                  ↩️ Play Replay
-                </button>
-              </div>
             </div>
           )}
 
         </div>
 
-        {/* Interactive Action Control Footer */}
+        {/* Action Controls Footer */}
         <div className="mt-5 flex justify-end items-center border-t border-gray-200/50 pt-4">
           {stage < 8 ? (
             <button
