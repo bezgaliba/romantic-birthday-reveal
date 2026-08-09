@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
 // Configure your customized partner details here!
-const PARTNER_NAME = "My Love";
+const PARTNER_NAME = "Kane";
 const BIRTHDAY_MESSAGE = `
-  Happy Birthday to the most incredible person in my life. You bring so much light, 
-  laughter, and love into my world every single day. Today is all about celebrating you, 
-  your beautiful heart, and everything that makes you unique. 
-  
-  I have prepared a few surprises for you to unwrap. I hope they bring a smile to 
-  your face! Press the button below to start revealing them.
+  Happy 35th Birthday to the most loved person in my life.
+  As you say, I cannot imagine a life without you!
+  Thank you for bringing so much joy each day.
+  As we turn the next chapter in your life, let's reveal some of your brithday surprises.
+  Before we do, I need a quick favor of reviewing your morning service!
+  Press the button below to start.
 `;
 
 const PRESENTS = [
@@ -17,33 +17,81 @@ const PRESENTS = [
     title: "Swimming with Dolphins!",
     emoji: "🐬🇲🇺✨",
     imageName: "gift1.png", // Placed in the public/ folder
-    description: "An unforgettable adventure in Mauritius! We are going on a private early-morning boat trip into the crystal-clear ocean of Tamarin Bay to swim alongside wild, playful dolphins in their natural habitat.",
+    description: "That's right. We are going on a early-morning boat trip into the ocean of Tamarin Bay to swim alongside wild, playful dolphins in their natural habitat. Afterwards, snorkeling in coral, seeing some kind of weird rock formation, BBQ on the island of Benitiers and afterwards stay there for a beach day.",
     ribbonColor: "#ec4899", // pink-500
     boxColor: "#f472b6"     // pink-400
   },
   {
     id: 2,
-    title: "Mystery Game on Nintendo Switch 2",
+    title: "Game on Nintendo Switch 2",
     emoji: "🎮🕵️‍♂️🎁",
     imageName: "gift2.png", // Placed in the public/ folder
-    description: "Prepare your detective skills! This is a highly anticipated, mind-bending mystery game custom-selected for your gaming nights on the brand new Nintendo Switch 2. Ready to crack the case?",
-    ribbonColor: "#10b981", // emerald-500
-    boxColor: "#34d399"     // emerald-400
+    description: (
+      <div className="space-y-4 text-left">
+        <p className="font-bold text-gray-900 text-base">A mystery game you've unlocked!</p>
+        
+        <p className="text-xs uppercase tracking-wider font-extrabold text-indigo-600">
+          How to claim your adventure:
+        </p>
+        
+        <ol className="list-decimal pl-5 space-y-3 text-xs sm:text-sm text-gray-700">
+          <li className="pl-1">
+            Log into <span className="font-bold text-gray-900">accounts.nintendo.com</span> and change your account region to <span className="font-bold text-indigo-600">Japan</span>.
+            <div className="mt-1.5 pl-3 border-l-2 border-rose-300 text-xs text-rose-600 font-medium">
+              Note: This action will temporarily reset your active eShop balance.
+            </div>
+          </li>
+          
+          <li className="pl-1">
+            Open <span className="font-bold text-gray-900">ec.nintendo.com/redeem</span> in your web browser.
+          </li>
+          
+          <li className="pl-1">
+            Redeem your secret activation key:
+            <div className="mt-2 pl-2">
+              <code className="block bg-gray-100/90 py-2 px-4 rounded-xl border border-gray-200 font-mono text-center text-sm font-black tracking-widest text-indigo-700 select-all shadow-inner">
+                XXXX-XXXX-XXXX-XXXX
+              </code>
+            </div>
+          </li>
+          
+          <li className="pl-1">
+            Switch your region back to its previous setting, download your game, and start playing!
+          </li>
+        </ol>
+      </div>
+    )
   },
   {
     id: 3,
     title: "A Surprise Dinner in Mauritius",
     emoji: "🥂🌅🕯️",
     imageName: "gift3.png", // Placed in the public/ folder
-    description: "A magical, private dining experience right on the powdery sands of Mauritius. We will enjoy local gourmet delicacies, candle lights, and matching wines while watching the spectacular tropical sunset together.",
+    description: "Take you out for dining dining experience in Moka. It's my treat!",
     ribbonColor: "#8b5cf6", // violet-500
     boxColor: "#a78bfa"     // violet-400
   }
 ];
 
 export default function App() {
+  // Stages: 
+  // 0: Initial Birthday Letter
+  // 1: Interactive Breakfast Feedback Form 🥞
+  // 2: Present 1 (Closed) -> 3: Present 1 (Opened)
+  // 4: Present 2 (Closed) -> 5: Present 2 (Opened)
+  // 6: Present 3 (Closed) -> 7: Present 3 (Opened)
+  // 8: Final Screen
   const [stage, setStage] = useState(0);
   const [hearts, setHearts] = useState([]);
+  
+  // Feedback Form State
+  const [ratings, setRatings] = useState({
+    coffee: 10,
+    juice: 10,
+    pancakes: 10,
+    bacon: 10,
+    flowers: 10
+  });
 
   // Generate floating heart background elements
   useEffect(() => {
@@ -59,13 +107,14 @@ export default function App() {
   }, []);
 
   const handleNext = () => {
-    if (stage < 7) {
+    if (stage < 8) {
       setStage(prev => prev + 1);
     }
   };
 
   const handleReset = () => {
     setStage(0);
+    setRatings({ coffee: 10, juice: 10, pancakes: 10, bacon: 10, flowers: 10 });
   };
 
   const HeartIcon = ({ className = "w-6 h-6" }) => (
@@ -119,7 +168,6 @@ export default function App() {
               alt="Gift Surprise" 
               className="w-full h-full object-cover"
               onError={(e) => {
-                // If image fails to load or hasn't finished rendering, fallback gracefully to the emoji
                 e.target.style.display = 'none';
                 e.target.nextSibling.style.display = 'flex';
               }}
@@ -155,10 +203,37 @@ export default function App() {
     </svg>
   );
 
+  const handleRatingChange = (key, val) => {
+    setRatings(prev => ({ ...prev, [key]: parseInt(val, 10) }));
+  };
+
+  // Fun response snippets that update dynamically as they slide the scale
+  const getReviewReaction = (key, rating) => {
+    if (rating === 10) {
+      if (key === 'coffee') return "Absolute fuel of gods! ☕⚡";
+      if (key === 'juice') return "Sweet tropical nectar! 🍹✨";
+      if (key === 'pancakes') return "Cloud-fluffy perfection! 🥞☁️";
+      if (key === 'bacon') return "Crispy heaven, cooked with pure love! 🥓🔥";
+      if (key === 'flowers') return "They smell as sweet as you! 💐❤️";
+    }
+    
+    // Aesthetic feedback for flowers
+    if (key === 'flowers') {
+      if (rating >= 8) return "They make the room look so beautiful! 🌸";
+      if (rating >= 5) return "A lovely splash of color! 🌷";
+      return "I will find an even prettier bouquet next time! 🥺";
+    }
+
+    // Delicious feedback for food & drinks
+    if (rating >= 8) return "Loved it immensely! 🥰";
+    if (rating >= 5) return "Pretty yummy! 😊";
+    return "Next time I will cook it even better, promise! 🥺";
+  };
+
   const getCurrentPresent = () => {
-    if (stage === 1 || stage === 2) return { ...PRESENTS[0], isOpen: stage === 2, index: 1 };
-    if (stage === 3 || stage === 4) return { ...PRESENTS[1], isOpen: stage === 4, index: 2 };
-    if (stage === 5 || stage === 6) return { ...PRESENTS[2], isOpen: stage === 6, index: 3 };
+    if (stage === 2 || stage === 3) return { ...PRESENTS[0], isOpen: stage === 3, index: 1 };
+    if (stage === 4 || stage === 5) return { ...PRESENTS[1], isOpen: stage === 5, index: 2 };
+    if (stage === 6 || stage === 7) return { ...PRESENTS[2], isOpen: stage === 7, index: 3 };
     return null;
   };
 
@@ -185,14 +260,14 @@ export default function App() {
       ))}
 
       {/* Main Container Card */}
-      <div className="relative z-10 w-full max-w-md bg-white/70 backdrop-blur-md border border-white/40 shadow-2xl rounded-3xl p-6 sm:p-8 transition-all duration-500 ease-out flex flex-col justify-between min-h-[480px]">
+      <div className="relative z-10 w-full max-w-md bg-white/70 backdrop-blur-md border border-white/40 shadow-2xl rounded-3xl p-5 sm:p-7 transition-all duration-500 ease-out flex flex-col justify-between min-h-[500px]">
         
-        {/* Progress Dots indicators */}
-        {stage > 0 && stage < 7 && (
+        {/* Progress Dots indicators shown during gift steps (Stages 2-7) */}
+        {stage >= 2 && stage < 8 && (
           <div className="flex justify-center gap-2 mb-4">
             {[1, 2, 3].map((num) => {
-              const isActive = Math.ceil(stage / 2) === num;
-              const isPassed = Math.ceil(stage / 2) > num;
+              const isActive = Math.ceil((stage - 1) / 2) === num;
+              const isPassed = Math.ceil((stage - 1) / 2) > num;
               return (
                 <div 
                   key={num} 
@@ -224,7 +299,90 @@ export default function App() {
             </div>
           )}
 
-          {/* STAGES 1, 3, 5: Closed Presents */}
+          {/* STAGE 1: 1-10 Birthday Breakfast Feedback Form */}
+          {stage === 1 && (
+            <div className="text-left space-y-4">
+              <div className="text-center space-y-1 mb-2">
+                <span className="text-2xl">🥞🍳🍹</span>
+                <h2 className="text-2xl font-black text-gray-800 tracking-tight">Morning Review</h2>
+                <p className="text-xs text-gray-500 font-medium">How did you enjoy your special birthday service?</p>
+              </div>
+
+              <div className="space-y-4 bg-white/55 p-4 rounded-2xl border border-white/60 shadow-inner max-h-[320px] overflow-y-auto pr-1">
+                {/* 1. Coffee */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-700">
+                    <span className="flex items-center gap-1">☕ Coffee</span>
+                    <span className="text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">{ratings.coffee}/10</span>
+                  </div>
+                  <input 
+                    type="range" min="1" max="10" value={ratings.coffee}
+                    onChange={(e) => handleRatingChange('coffee', e.target.value)}
+                    className="w-full accent-pink-500 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('coffee', ratings.coffee)}</p>
+                </div>
+
+                {/* 2. Juice */}
+                <div className="space-y-1 border-t border-gray-100 pt-2">
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-700">
+                    <span className="flex items-center gap-1">🍹 Fresh Juice</span>
+                    <span className="text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">{ratings.juice}/10</span>
+                  </div>
+                  <input 
+                    type="range" min="1" max="10" value={ratings.juice}
+                    onChange={(e) => handleRatingChange('juice', e.target.value)}
+                    className="w-full accent-pink-500 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('juice', ratings.juice)}</p>
+                </div>
+
+                {/* 3. Fluffy Pancakes */}
+                <div className="space-y-1 border-t border-gray-100 pt-2">
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-700">
+                    <span className="flex items-center gap-1">🥞 Fluffy Pancakes</span>
+                    <span className="text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">{ratings.pancakes}/10</span>
+                  </div>
+                  <input 
+                    type="range" min="1" max="10" value={ratings.pancakes}
+                    onChange={(e) => handleRatingChange('pancakes', e.target.value)}
+                    className="w-full accent-pink-500 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('pancakes', ratings.pancakes)}</p>
+                </div>
+
+                {/* 4. Bacon */}
+                <div className="space-y-1 border-t border-gray-100 pt-2">
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-700">
+                    <span className="flex items-center gap-1">🥓 Crispy Bacon</span>
+                    <span className="text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">{ratings.bacon}/10</span>
+                  </div>
+                  <input 
+                    type="range" min="1" max="10" value={ratings.bacon}
+                    onChange={(e) => handleRatingChange('bacon', e.target.value)}
+                    className="w-full accent-pink-500 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('bacon', ratings.bacon)}</p>
+                </div>
+
+                {/* 5. Flowers */}
+                <div className="space-y-1 border-t border-gray-100 pt-2">
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-700">
+                    <span className="flex items-center gap-1">💐 Pretty Flowers</span>
+                    <span className="text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">{ratings.flowers}/10</span>
+                  </div>
+                  <input 
+                    type="range" min="1" max="10" value={ratings.flowers}
+                    onChange={(e) => handleRatingChange('flowers', e.target.value)}
+                    className="w-full accent-pink-500 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <p className="text-[10px] text-gray-500 font-medium italic transition-all">{getReviewReaction('flowers', ratings.flowers)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STAGES 2, 4, 6: Closed Presents */}
           {currentPresent && !currentPresent.isOpen && (
             <div className="text-center space-y-6">
               <div className="space-y-2">
@@ -249,7 +407,7 @@ export default function App() {
             </div>
           )}
 
-          {/* STAGES 2, 4, 6: Opened Presents Details */}
+          {/* STAGES 3, 5, 7: Opened Presents Details */}
           {currentPresent && currentPresent.isOpen && (
             <div className="text-center space-y-4">
               <div className="space-y-1">
@@ -269,16 +427,14 @@ export default function App() {
                 emoji={currentPresent.emoji}
               />
 
-              <div className="bg-white/50 p-4 rounded-2xl border border-emerald-100 shadow-sm">
-                <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
-                  {currentPresent.description}
-                </p>
+              <div className="bg-white/50 p-5 rounded-2xl border border-emerald-100 shadow-sm text-gray-700 text-sm sm:text-base leading-relaxed text-left">
+                {currentPresent.description}
               </div>
             </div>
           )}
 
-          {/* STAGE 7: Final Screen */}
-          {stage === 7 && (
+          {/* STAGE 8: Final Screen */}
+          {stage === 8 && (
             <div className="text-center space-y-6">
               <div className="relative inline-block">
                 <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-rose-400 to-indigo-500 blur opacity-75 animate-pulse-slow" />
@@ -288,7 +444,7 @@ export default function App() {
                 I hope you loved your surprises!
               </h2>
               <p className="text-gray-600 text-sm sm:text-base">
-                May this year bring you endless joy, incredible adventures, and even closer moments between us. I love you to the moon and back! ❤️
+                May this year bring you endless joy and even closer moments between us. I love you to the moon (and beyond) and back! ❤️
               </p>
               
               <div className="pt-2">
@@ -305,18 +461,18 @@ export default function App() {
         </div>
 
         {/* Interactive Action Control Footer */}
-        <div className="mt-6 flex justify-end items-center border-t border-gray-200/50 pt-4">
-          {stage < 7 ? (
+        <div className="mt-5 flex justify-end items-center border-t border-gray-200/50 pt-4">
+          {stage < 8 ? (
             <button
               onClick={handleNext}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-sm sm:text-base cursor-pointer"
             >
-              {stage === 0 ? "Let's see the surprises" : stage % 2 === 1 ? "Open Gift" : "Next Surprise"}
+              {stage === 0 ? "Let's review breakfast!" : stage === 1 ? "Submit Reviews & See Gifts!" : stage % 2 === 0 ? "Open Gift" : "Next Surprise"}
               <ArrowIcon />
             </button>
           ) : (
             <p className="text-center w-full text-xs text-gray-400 font-medium italic">
-              Made with love, forever and always.
+              Yours truly, Māris
             </p>
           )}
         </div>
